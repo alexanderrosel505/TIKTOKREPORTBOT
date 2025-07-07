@@ -20,8 +20,18 @@ jobs:
         sudo apt-get install -y git zip unzip openjdk-11-jdk
         pip install buildozer cython==0.29.36
         
+    - name: Initialize Buildozer
+      run: |
+        # Create necessary directories first
+        mkdir -p $HOME/.buildozer
+        mkdir -p .buildozer/android/platform
+        
+        # Initialize without cleaning
+        buildozer android update
+        
     - name: Build APK
       run: |
+        # Now safe to clean and build
         buildozer android clean
         buildozer -v android debug
         
