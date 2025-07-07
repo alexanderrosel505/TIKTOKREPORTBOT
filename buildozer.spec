@@ -7,12 +7,12 @@ source.include_exts = py
 source.main = tiktok_report_bot.py
 version = 1.0
 
-# Requirements - use exact versions
+# Requirements
 requirements = python3, kivy==2.3.0, requests, openssl
 
 # Android settings
 android.ndk = 25b
-p4a.branch = 2024.05.06  # Use stable release branch
+p4a.branch = 2024.05.06  # MUST BE ON SEPARATE LINE
 
 orientation = portrait
 android.permissions = INTERNET
