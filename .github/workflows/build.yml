@@ -22,11 +22,15 @@ jobs:
         
     - name: Build APK
       run: |
-        # Explicitly set p4a branch to avoid spec file issues
-        buildozer -v android debug -- \
-          --p4a-branch=2024.05.06 \
+        # Force clean environment
+        buildozer android clean
+        # Build with explicit parameters
+        buildozer -v android debug \
+          -- \
+          --p4a-branch=master \
           --ndk-version=25.1.8937393 \
-          --sdk-version=33
+          --sdk-version=33 \
+          --arch=arm64-v8a
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
