@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 for better compatibility
+    runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -17,29 +17,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-11-jdk autoconf automake libtool
+        sudo apt-get install -y git zip unzip openjdk-11-jdk
         pip install buildozer cython==0.29.36
-        
-    - name: Initialize Buildozer environment
-      run: |
-        # Create minimal buildozer environment
-        mkdir -p .buildozer/android
-        buildozer android update
-        # Ensure directories exist
-        mkdir -p .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/python-for-android
-        mkdir -p .buildozer/android/platform/python-for-android
-        
-    - name: Apply libffi patch
-      run: |
-        # Create directories if they don't exist
-        mkdir -p ~/.buildozer/android/platform/python-for-android
-        mkdir -p .buildozer/android/platform/python-for-android
-        
-        # Apply patches to both locations
-        find ~/.buildozer -name 'configure.ac' -exec sed -i 's/AC_TRY_LINK/AC_LINK_IFELSE/g' {} + || true
-        find ~/.buildozer -name 'configure' -exec sed -i 's/LT_SYS_SYMBOL_USCORE/_LT_SYS_SYMBOL_USCORE/g' {} + || true
-        find .buildozer -name 'configure.ac' -exec sed -i 's/AC_TRY_LINK/AC_LINK_IFELSE/g' {} + || true
-        find .buildozer -name 'configure' -exec sed -i 's/LT_SYS_SYMBOL_USCORE/_LT_SYS_SYMBOL_USCORE/g' {} + || true
         
     - name: Set environment variables
       run: |
