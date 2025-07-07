@@ -17,21 +17,23 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-11-jdk
+        sudo apt-get install -y git zip unzip openjdk-11-jdk autoconf automake libtool
         pip install buildozer cython==0.29.36
         
-    - name: Initialize Buildozer
+    - name: Patch libffi build
       run: |
-        # Create necessary directories first
-        mkdir -p $HOME/.buildozer
-        mkdir -p .buildozer/android/platform
+        # Apply workaround for autoconf issues
+        find ~/.buildozer -name 'configure.ac' -exec sed -i 's/AC_TRY_LINK/AC_LINK_IFELSE/g' {} +
+        find ~/.buildozer -name 'configure' -exec sed -i 's/LT_SYS_SYMBOL_USCORE/_LT_SYS_SYMBOL_USCORE/g' {} +
         
-        # Initialize without cleaning
-        buildozer android update
+    - name: Set environment variables
+      run: |
+        echo "USE_SDK_WRAPPER=1" >> $GITHUB_ENV
+        echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=/usr/local/lib/android/sdk/ndk/25.1.8937393" >> $GITHUB_ENV
         
     - name: Build APK
       run: |
-        # Now safe to clean and build
         buildozer android clean
         buildozer -v android debug
         
