@@ -20,73 +20,59 @@ jobs:
         sudo apt-get install -y git zip unzip openjdk-11-jdk python3-distutils
         pip install buildozer cython==0.29.36 setuptools
         
-    - name: Create buildozer directories
+    - name: Use pre-configured Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        build-tools-version: 34.0.0
+        platform-version: 33
+        ndk-version: 25.1.8937393
+        cmake-version: 3.22.1
+        accept-android-licenses: true
+        
+    - name: Configure Buildozer
       run: |
+        # Create directories
         mkdir -p .buildozer/android/platform
-        buildozer android -- version || true
-        
-    - name: Setup Android SDK
-      run: |
-        # Set paths
-        ANDROID_SDK_ROOT="$PWD/.buildozer/android/platform/android-sdk"
-        mkdir -p "$ANDROID_SDK_ROOT"
-        
-        # Download and install command-line tools
-        CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip"
-        curl -o cmdline-tools.zip $CMDLINE_TOOLS_URL
-        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT"
-        mv "$ANDROID_SDK_ROOT/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools-latest"
-        rm cmdline-tools.zip
         
         # Set environment variables
-        export JAVA_HOME=/usr/lib/jvm/temurin-11-jdk-amd64
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools-latest/bin:$PATH
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
         
-        # Create license directory
-        mkdir -p "$ANDROID_SDK_ROOT/licenses"
-        
-        # Accept ALL known Android licenses
-        echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\n" > "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
-        echo -e "24333f8a63b6825ea9c5514f83c2829b004d1fee\n" >> "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
-        echo -e "d56f5187479451eabf01fb78af6dfcb131a6481e\n" >> "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
-        echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n" > "$ANDROID_SDK_ROOT/licenses/android-sdk-preview-license"
-        echo -e "601085b94cd77f0b54ff86406957099ebe79f4b9\n" > "$ANDROID_SDK_ROOT/licenses/intel-android-extra-license"
-        
-        # Install platform tools and build tools
-        yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "build-tools;36.0.0"
-        
-        # Verify installation
-        echo "Build tools contents:"
-        ls -l $ANDROID_SDK_ROOT/build-tools/36.0.0
-        
-        # Add build-tools to PATH
-        echo "$ANDROID_SDK_ROOT/build-tools/36.0.0" >> $GITHUB_PATH
-        
-    - name: Download Android NDK
-      run: |
-        NDK_URL="https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
-        curl -o ndk.zip $NDK_URL
-        unzip -q ndk.zip -d .buildozer/android/platform
-        mv .buildozer/android/platform/android-ndk-r25b .buildozer/android/platform/android-ndk-r25b
-        rm ndk.zip
-        echo "NDK_PATH=$PWD/.buildozer/android/platform/android-ndk-r25b" >> $GITHUB_ENV
+        # Create buildozer.spec configuration
+        cat > buildozer.spec <<EOL
+[app]
+title = TikTokReportBot
+package.name = tiktokreportbot
+package.domain = org.tiktokreport
+source.dir = .
+source.include_exts = py
+source.main = tiktok_report_bot.py
+version = 1.0
+
+# Requirements
+requirements = python3, kivy==2.3.0, requests
+
+# Android settings
+android.minapi = 21
+android.api = 33
+orientation = portrait
+android.permissions = INTERNET
+
+# Use pre-installed SDK
+android.sdk_path = $ANDROID_SDK_ROOT
+android.ndk_path = $ANDROID_NDK_HOME
+EOL
         
     - name: Build APK
       run: |
-        # Set environment variables for Buildozer
-        export ANDROID_SDK_ROOT="$PWD/.buildozer/android/platform/android-sdk"
-        export ANDROID_NDK_HOME="$NDK_PATH"
-        
-        # Verify tools are accessible
-        echo "AIDL path: $(which aidl)"
-        aidl --version || true
+        # Verify Android tools
+        echo "SDK path: $ANDROID_SDK_ROOT"
+        echo "NDK path: $ANDROID_NDK_HOME"
+        ls -l $ANDROID_SDK_ROOT/build-tools
+        ls -l $ANDROID_NDK_HOME
         
         # Build the APK
-        buildozer -v android debug \
-          -- \
-          --p4a-branch=master \
-          --ndk-version=25.1.8937393 \
-          --sdk-version=33
+        buildozer -v android debug
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
