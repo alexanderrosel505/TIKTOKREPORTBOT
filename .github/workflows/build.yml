@@ -1,42 +1,46 @@
-name: Android CI
+name: Build Android APK
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17' # ✅ Java 17 (Needed for latest SDK tools)
+          java-version: '17'
 
-      - name: Download and Install Android SDK Command-line Tools
+      - name: Install Android SDK Command Line Tools
         run: |
-          mkdir -p ${HOME}/android-sdk/cmdline-tools
+          mkdir -p "$HOME/android-sdk/cmdline-tools"
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools/tmp
-          mv ${HOME}/android-sdk/cmdline-tools/tmp/cmdline-tools ${HOME}/android-sdk/cmdline-tools/cmdline-tools
-          rm -rf cmdline-tools.zip ${HOME}/android-sdk/cmdline-tools/tmp
-          
+          unzip cmdline-tools.zip -d "$HOME/android-sdk/cmdline-tools/tmp"
+          mv "$HOME/android-sdk/cmdline-tools/tmp/cmdline-tools" "$HOME/android-sdk/cmdline-tools/cmdline-tools"
+          rm -rf cmdline-tools.zip "$HOME/android-sdk/cmdline-tools/tmp"
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "$HOME/android-sdk/cmdline-tools/cmdline-tools/bin" >> $GITHUB_PATH
-          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
 
-      - name: Accept Android SDK Licenses
-        run: sdkmanager --licenses || true
+      - name: Accept Licenses
+        run: yes | sdkmanager --licenses
 
-      - name: Install Required SDK Packages
-        run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Install SDK Packages
+        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      - name: Verify Installation
-        run: adb --version
+      - name: Build APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
