@@ -42,11 +42,14 @@ jobs:
           yes | sdkmanager --licenses
           sdkmanager "build-tools;30.0.3" "platforms;android-30" "platform-tools"
 
-      - name: Configure Buildozer to use correct SDK path
+      - name: Configure Buildozer SDK path
         run: |
           # Buildozer expects SDK in ~/.buildozer/android/platform/android-sdk
-          # We need to create a symlink or copy the SDK to this location
-          mkdir -p ~/.buildozer/android/platform
+          # We need to ensure the structure matches what buildozer expects
+          mkdir -p ~/.buildozer/android/platform/android-sdk/tools/bin
+          # Create a symlink for sdkmanager to the expected location
+          ln -s ${HOME}/android-sdk/cmdline-tools/latest/bin/sdkmanager ~/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager || true
+          # Also symlink the main SDK directory if it doesn't exist already
           ln -s ${HOME}/android-sdk ~/.buildozer/android/platform/android-sdk || true
 
       - name: Initialize Buildozer
@@ -62,5 +65,3 @@ jobs:
         with:
           name: tiktok-bot-apk
           path: bin/*.apk
-
-
