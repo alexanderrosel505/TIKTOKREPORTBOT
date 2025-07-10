@@ -39,7 +39,6 @@ jobs:
 title = TikTokReportBot
 package.name = tiktokreportbot
 package.domain = org.tiktokreport
-source.dir = .
 source.include_exts = py
 source.main = tiktok_report_bot.py
 version = 1.0
