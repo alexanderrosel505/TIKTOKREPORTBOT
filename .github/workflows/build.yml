@@ -5,43 +5,16 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-22.04
+    container:
+      image: kivy/buildozer:latest
+      options: --privileged
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        
-    - name: Install dependencies
+    - name: Create buildozer.spec
       run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-11-jdk
-        pip install buildozer cython==0.29.36
-        
-    - name: Download Android SDK
-      run: |
-        wget https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
-        unzip commandlinetools-linux-8512546_latest.zip -d android-sdk
-        rm commandlinetools-linux-8512546_latest.zip
-        echo "ANDROID_HOME=$PWD/android-sdk" >> $GITHUB_ENV
-        
-    - name: Install Android tools
-      run: |
-        yes | $ANDROID_HOME/cmdline-tools/bin/sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-33"
-        echo "$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_PATH
-        
-    - name: Download NDK
-      run: |
-        wget https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-        unzip android-ndk-r25b-linux.zip
-        rm android-ndk-r25b-linux.zip
-        echo "ANDROID_NDK_HOME=$PWD/android-ndk-r25b" >> $GITHUB_ENV
-        
-    - name: Build APK
-      run: |
-        # Create buildozer.spec
         cat > buildozer.spec <<EOL
 [app]
 title = TikTokReportBot
@@ -58,16 +31,15 @@ android.minapi = 21
 android.api = 33
 orientation = portrait
 android.permissions = INTERNET
-
-# Point to our installed SDK/NDK
-android.sdk_path = $ANDROID_HOME
-android.ndk_path = $ANDROID_NDK_HOME
 EOL
         
-        # Build the APK
-        buildozer -v android debug
+    - name: Install additional dependencies
+      run: pip install requests
+      
+    - name: Build APK
+      run: buildozer -v android debug
         
-    - name: Upload APK
+    - name: Save APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: tiktok-bot-apk
