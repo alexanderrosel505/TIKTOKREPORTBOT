@@ -14,29 +14,16 @@ jobs:
       with:
         python-version: '3.10'
         
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y git zip unzip openjdk-11-jdk python3-distutils
-        pip install buildozer cython==0.29.36 setuptools
+        pip install buildozer cython==0.29.36
         
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        build-tools-version: 34.0.0
-        platform-version: 33
-        ndk-version: 25.1.8937393
-        cmake-version: 3.22.1
-        accept-android-licenses: true
-        
-    - name: Configure Buildozer
+    - name: Create buildozer.spec
       run: |
-        mkdir -p .buildozer/android/platform
-        
-        # Create buildozer.spec
         cat > buildozer.spec <<EOL
 [app]
-
 title = TikTokReportBot
 package.name = tiktokreportbot
 package.domain = org.tiktokreport
@@ -45,26 +32,54 @@ source.include_exts = py
 source.main = tiktok_report_bot.py
 version = 1.0
 
-# Requirements
 requirements = python3, kivy==2.3.0, requests
 
-# Android settings
 android.minapi = 21
 android.api = 33
 orientation = portrait
 android.permissions = INTERNET
-
-# Use pre-installed SDK
-android.sdk_path = $ANDROID_SDK_ROOT
-android.ndk_path = $ANDROID_NDK_HOME
 EOL
+        
+    - name: Install Android SDK components
+      run: |
+        # Create directories
+        mkdir -p ~/.android/licenses
+        mkdir -p .buildozer/android/platform
+        
+        # Accept all Android licenses
+        echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.android/licenses/android-sdk-license
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.android/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
+        
+        # Download and install Android SDK
+        SDK_URL="https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip"
+        curl -o sdk-tools.zip $SDK_URL
+        unzip -q sdk-tools.zip -d android-sdk
+        rm sdk-tools.zip
+        
+        # Set environment variables
+        export ANDROID_HOME=$PWD/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/bin:$PATH
+        
+        # Install required components
+        yes | sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-33"
+        
+    - name: Download Android NDK
+      run: |
+        NDK_URL="https://dl.google.com/android/repository/android-ndk-r25b-linux.zip"
+        curl -o ndk.zip $NDK_URL
+        unzip -q ndk.zip
+        rm ndk.zip
+        echo "NDK_PATH=$PWD/android-ndk-r25b" >> $GITHUB_ENV
         
     - name: Build APK
       run: |
-        # Verify Android tools
-        echo "SDK path: $ANDROID_SDK_ROOT"
-        echo "Build tools:"
-        ls $ANDROID_SDK_ROOT/build-tools
+        # Set environment variables
+        export ANDROID_SDK_ROOT=$PWD/android-sdk
+        export ANDROID_NDK_HOME=$NDK_PATH
+        
+        # Verify tools
         echo "AIDL path:"
         find $ANDROID_SDK_ROOT -name aidl
         
