@@ -25,19 +25,33 @@ jobs:
         mkdir -p .buildozer/android/platform
         buildozer android -- version || true
         
-    - name: Setup Android SDK licenses
+    - name: Setup Android SDK and accept licenses
       run: |
-        # The SDK should have been downloaded by now in .buildozer/android/platform/android-sdk
-        ANDROID_SDK_ROOT=".buildozer/android/platform/android-sdk"
-        mkdir -p $ANDROID_SDK_ROOT/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-        # Also in the home directory to be safe
-        mkdir -p ~/.android/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
+        # Set paths
+        ANDROID_SDK_ROOT="$PWD/.buildozer/android/platform/android-sdk"
+        SDK_MANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        
+        # Create license files
+        mkdir -p "$ANDROID_SDK_ROOT/licenses"
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_SDK_ROOT/licenses/android-sdk-preview-license"
+        
+        # Install command-line tools if not present
+        if [ ! -f "$SDK_MANAGER" ]; then
+          echo "Installing command-line tools..."
+          CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip"
+          curl -o cmdline-tools.zip $CMDLINE_TOOLS_URL
+          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          rm cmdline-tools.zip
+        fi
+        
+        # Install required components
+        export JAVA_HOME=/usr/lib/jvm/temurin-11-jdk-amd64
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+        
+        yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "build-tools;36.0.0"
         
     - name: Build APK
       run: |
