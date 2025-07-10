@@ -1,63 +1,42 @@
-name: Build APK
+name: Android CI
 
-on: [push]
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17' # ✅ Java 17 (Needed for latest SDK tools)
 
-    - name: Set up Java 17 (Required for Android tools)
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Download and Install Android SDK Command-line Tools
+        run: |
+          mkdir -p ${HOME}/android-sdk/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d ${HOME}/android-sdk/cmdline-tools/tmp
+          mv ${HOME}/android-sdk/cmdline-tools/tmp/cmdline-tools ${HOME}/android-sdk/cmdline-tools/cmdline-tools
+          rm -rf cmdline-tools.zip ${HOME}/android-sdk/cmdline-tools/tmp
+          
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/cmdline-tools/bin" >> $GITHUB_PATH
+          echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip
-        pip install cython==0.29.36 buildozer
+      - name: Accept Android SDK Licenses
+        run: sdkmanager --licenses || true
 
-    - name: Install Android SDK cmdline-tools
-      run: |
-        mkdir -p ${HOME}/android-sdk/cmdline-tools
-        cd ${HOME}/android-sdk/cmdline-tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        unzip cmdline-tools.zip -d latest
-        rm cmdline-tools.zip
-        export ANDROID_SDK_ROOT=${HOME}/android-sdk
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        sdkmanager --licenses || true
-        sdkmanager "platform-tools" "platforms;android-31" "build-tools;31.0.0" "ndk;23.1.7779620"
+      - name: Install Required SDK Packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-    - name: Accept Android licenses
-      run: |
-        mkdir -p ~/.android/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
-
-    - name: Initialize Buildozer
-      run: |
-        buildozer android --version || true
-
-    - name: Build APK
-      run: |
-        export ANDROID_SDK_ROOT=${HOME}/android-sdk
-        export PATH=$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        buildozer -v android debug
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: tiktok-bot-apk
-        path: bin/*.apk
+      - name: Verify Installation
+        run: adb --version
