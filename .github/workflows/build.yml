@@ -20,33 +20,29 @@ jobs:
         sudo apt-get install -y git zip unzip openjdk-11-jdk python3-distutils
         pip install buildozer cython==0.29.36 setuptools
         
-    - name: Initialize Buildozer
+    - name: Initialize Buildozer (download SDK)
       run: |
         mkdir -p .buildozer/android/platform
         buildozer android -- version || true
         
-    - name: Setup Android SDK and accept licenses
+    - name: Setup Android SDK licenses
       run: |
-        # Create directories
+        # The SDK should have been downloaded by now in .buildozer/android/platform/android-sdk
+        ANDROID_SDK_ROOT=".buildozer/android/platform/android-sdk"
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+        # Also in the home directory to be safe
         mkdir -p ~/.android/licenses
-        mkdir -p .buildozer/android/platform/android-sdk/licenses
-        
-        # Write license files to both locations
         echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.android/licenses/android-sdk-license
         echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/licenses/android-sdk-license
         echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
         
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > .buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> .buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > .buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
-        
-        # Install required components directly
+        # Install platform-tools and build-tools explicitly
         export JAVA_HOME=/usr/lib/jvm/temurin-11-jdk-amd64
-        export ANDROID_HOME=$PWD/.buildozer/android/platform/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$PATH
-        
-        # Install SDK components
-        yes | sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "build-tools;36.0.0"
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$PATH
+        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "build-tools;36.0.0"
         
     - name: Build APK
       run: |
