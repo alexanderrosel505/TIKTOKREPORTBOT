@@ -1,20 +1,52 @@
-version: 1.0
-buildozer:
-  android:
-    requirements:
-      - python3
-      - kivy
-      - requests
-      - urllib3
-      - chardet
-      - idna
-    permissions:
-      - INTERNET
-    presplash: null
-    icon: null
-    orientation: portrait
-    fullscreen: 0
-    arch: armeabi-v7a
-    p4a_branch: master
-    p4a_fork: kivy
-    bootstrap: sdl2
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        pip install --upgrade pip setuptools virtualenv
+
+    - name: Install Buildozer
+      run: pip install buildozer cython
+
+    - name: Build APK
+      run: |
+        buildozer init
+        # Replace with your actual buildozer.spec configuration
+        echo "[app]" > buildozer.spec
+        echo "title = TikTok Report Bot" >> buildozer.spec
+        echo "package.name = tiktokreportbot" >> buildozer.spec
+        echo "package.domain = org.example" >> buildozer.spec
+        echo "source.dir = ." >> buildozer.spec
+        echo "source.include_exts = py,png,jpg,kv,atlas,json" >> buildozer.spec
+        echo "version = 1.0" >> buildozer.spec
+        echo "requirements = python3,kivy,requests,urllib3,chardet,idna" >> buildozer.spec
+        echo "android.permissions = INTERNET" >> buildozer.spec
+        echo "orientation = portrait" >> buildozer.spec
+        echo "android.arch = armeabi-v7a" >> buildozer.spec
+        echo "p4a.branch = master" >> buildozer.spec
+        
+        buildozer -v android debug
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: tiktok-report-bot
+        path: bin/*.apk
