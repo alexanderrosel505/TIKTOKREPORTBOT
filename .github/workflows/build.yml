@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    timeout-minutes: 45
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -36,15 +37,57 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-android-build-
 
-    - name: Install Buildozer
+    - name: Install Buildozer with specific versions
       run: |
-        pip install buildozer cython
+        pip install buildozer==1.5.0
+        pip install cython==0.29.36
+        pip install setuptools==65.5.0
 
-    # CRITICAL FIX: Clean existing NDK installations
-    - name: Clean conflicting Android NDK
+    # CRITICAL: Clean conflicting installations
+    - name: Clean build environment
       run: |
         rm -rf /usr/local/lib/android/sdk/ndk/*
         rm -rf ~/.buildozer/android/platform/android-ndk-*
+        rm -rf ~/.buildozer/android/platform/python-for-android
+
+    # FIX: Apply patch for jnius recipe
+    - name: Patch jnius recipe
+      run: |
+        mkdir -p ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/jnius
+        cat > ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/jnius/__init__.py << 'EOL'
+from pythonforandroid.recipe import CythonRecipe
+        
+class JniusRecipe(CythonRecipe):
+    version = '1.5.0'
+    url = 'https://github.com/kivy/pyjnius/archive/refs/tags/{version}.tar.gz'
+    depends = ['python3', 'setuptools']
+    call_hostpython_via_targetpython = False
+        
+    def get_recipe_env(self, arch, **kwargs):
+        env = super().get_recipe_env(arch, **kwargs)
+        env['PYJNIUS_SYSTEM'] = '1'
+        return env
+        
+    def prebuild_arch(self, arch):
+        super().prebuild_arch(arch)
+        # Apply patch to fix long/int issue
+        self.apply_patch('patches/fix_long_int.patch', arch.arch)
+EOL
+        
+        mkdir -p ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/jnius/patches
+        cat > ~/.buildozer/android/platform/python-for-android/pythonforandroid/recipes/jnius/patches/fix_long_int.patch << 'EOL'
+--- jnius/jnius_utils.pxi
++++ jnius/jnius_utils.pxi
+@@ -320,7 +320,7 @@
+             score += 10
+             continue
+         if r == 'S' or r == 'I':
+-            if isinstance(arg, int) or ((isinstance(arg, long) and arg < 2147483648):
++            if isinstance(arg, int) and arg < 2147483648:
+                 score += 20
+                 continue
+         if r == 'F':
+EOL
 
     - name: Build APK
       run: |
