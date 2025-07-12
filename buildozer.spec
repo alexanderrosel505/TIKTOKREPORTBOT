@@ -12,13 +12,18 @@ android.arch = armeabi-v7a
 p4a.branch = master
 fullscreen = 0
 
-# Android specific
+# Fix: Force specific NDK version
+android.ndk = 25b
 android.api = 33
 android.minapi = 21
-android.sdk = 28
-android.ndk = 23b
+android.sdk = 33
 android.private_storage = True
 android.accept_sdk_license = True
+
+# Build optimization
+p4a.bootstrap = sdl2
+android.allow_backup = False
+android.verbose = True
 
 [buildozer]
 log_level = 2
