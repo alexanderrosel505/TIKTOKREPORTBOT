@@ -1,51 +1,25 @@
 name: Build Android APK
 
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Build APK with Buildozer
+      uses: mrossinek/buildozer-action@v1.2.0
       with:
-        python-version: '3.10'
+        buildozer_version: stable
+        target: android debug
+        work_dir: .
+        extra_args: -v
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
-
-    - name: Install Buildozer
-      run: pip install buildozer cython
-
-    - name: Build APK
-      run: |
-        # Create minimal buildozer.spec
-        echo "[app]" > buildozer.spec
-        echo "title = TikTok Report Bot" >> buildozer.spec
-        echo "package.name = tiktokreportbot" >> buildozer.spec
-        echo "package.domain = org.example" >> buildozer.spec
-        echo "source.dir = ." >> buildozer.spec
-        echo "source.include_exts = py,png,jpg,kv,atlas,json" >> buildozer.spec
-        echo "version = 1.0" >> buildozer.spec
-        echo "requirements = python3,kivy,requests,urllib3,chardet,idna" >> buildozer.spec
-        echo "android.permissions = INTERNET" >> buildozer.spec
-        echo "orientation = portrait" >> buildozer.spec
-        echo "android.arch = armeabi-v7a" >> buildozer.spec
-        
-        # Build the APK
-        buildozer -v android debug
-
-    - name: Upload APK artifact
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: tiktok-report-bot
         path: bin/*.apk
-        retention-days: 5
+        retention-days: 3
