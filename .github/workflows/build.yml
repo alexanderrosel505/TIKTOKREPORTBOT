@@ -23,7 +23,7 @@ jobs:
         sudo apt-get install -y git zip unzip openjdk-17-jdk
         sudo apt-get install -y autoconf libtool pkg-config
         sudo apt-get install -y zlib1g-dev libncurses5-dev libncursesw5-dev
-        sudo apt-get install -y libtinfo5 cmake libffi-dev libssl-dev
+        sudo apt-get install -y cmake libffi-dev libssl-dev
         sudo apt-get install -y python3-pip virtualenv
 
     - name: Cache Android SDK
@@ -39,6 +39,12 @@ jobs:
     - name: Install Buildozer
       run: |
         pip install buildozer cython
+
+    # CRITICAL FIX: Clean existing NDK installations
+    - name: Clean conflicting Android NDK
+      run: |
+        rm -rf /usr/local/lib/android/sdk/ndk/*
+        rm -rf ~/.buildozer/android/platform/android-ndk-*
 
     - name: Build APK
       run: |
